@@ -35,6 +35,9 @@ public class NeuralNetwork implements Serializable {
     /** Neuron's activation function **/
     private ActivationFunction activationFcn;
     
+    /** Cached value of signature **/
+    private transient String signature = null;
+    
     /** 
      * Create a {@code NeuralNetwork} instance with the provided sizes of layers
      * and fill them with the default value of 0 and the default activation function 
@@ -324,22 +327,42 @@ public class NeuralNetwork implements Serializable {
     }
     
     /**
+     * Get a {@code String} representation of this network's structure in the 
+     * format: 
+     * <pre>(
+     * {@literal <}Num-of-inputs{@literal >}, 
+     * {@literal <}Hidden-layer-1-size{@literal >},
+     *  ...,
+     * {@literal <}Hidden-layer-n-size{@literal >}
+     * {@literal <}Num-of-outputs{@literal >}
+     * ).
+     * </pre>
+     * @return {@code String} representing this network's structure.
+     */
+    public String getSignature() {
+        if (signature == null) {
+            final String delimeter = ", ";
+            StringBuilder sb = new StringBuilder();
+            sb.append("(");
+            sb.append(nInputs);
+            sb.append(delimeter);
+            sb.append(Arrays.stream(hiddenLayerSizes).mapToObj(String::valueOf).
+                    collect(Collectors.joining(delimeter)));
+            sb.append(delimeter);
+            sb.append(nOutputs);
+            sb.append(")");
+            signature = sb.toString();
+        }
+        return signature;
+    }
+    
+    /**
      * Convert to {@code String} representing the structure of this network: 
      * the number of inputs, the sizes of each hidden layer and the number of outputs.
      * @return {@code String} representing the structure of this network
      */
     @Override
     public String toString() {
-        final String delimeter = ", ";
-        StringBuilder sb = new StringBuilder();
-        sb.append("(");
-        sb.append(nInputs);
-        sb.append(delimeter);
-        sb.append(Arrays.stream(hiddenLayerSizes).mapToObj(String::valueOf).
-                collect(Collectors.joining(delimeter)));
-        sb.append(delimeter);
-        sb.append(nOutputs);
-        sb.append(")");
-        return sb.toString();
+        return getSignature();
     }
 }

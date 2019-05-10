@@ -10,6 +10,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import org.hamcrest.CoreMatchers;
 
 
 /**
@@ -930,6 +931,20 @@ public class NeuralNetworkTest {
     }
     
     @Test
+    public void testGetSignature_Invoked_ReturnCorrectString() {
+        int nInputs = 2;
+        int[] hiddenLayerSizes = {2, 3};
+        int nOutputs = 4;
+        String expected = "(2, 2, 3, 4)";
+        
+        NeuralNetwork nn = new NeuralNetwork(nInputs, hiddenLayerSizes, nOutputs);
+        
+        String actual = nn.getSignature();
+        
+        Assert.assertEquals("String format is different", expected, actual);
+    }
+    
+    @Test
     public void testToString_Invoked_ReturnCorrectStructureInString() {
         int nInputs = 2;
         int[] hiddenLayerSizes = {2, 3};
@@ -977,6 +992,39 @@ public class NeuralNetworkTest {
         
         readNN.setWeight(0, 0, 1, 10.0);
         assertNNNotEquals(nn, readNN);
+    }
+    
+    @Test
+    public void testDeserialization_Read_GetSignatureReturnCorrectString() {
+        int nInputs = 2;
+        int[] hiddenLayerSizes = {2, 3};
+        int nOutputs = 4;
+        String expected = "(2, 2, 3, 4)";
+        
+        NeuralNetwork nn = new NeuralNetwork(nInputs, hiddenLayerSizes, 
+                nOutputs);
+        
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (ObjectOutputStream oos = new ObjectOutputStream(out)) {
+            oos.writeObject(nn);
+        }
+        catch(IOException e) {
+            Assert.fail("Exception caught: " + e.toString());
+        }
+        
+        NeuralNetwork readNN = null;
+        ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
+        try (ObjectInputStream ois = new ObjectInputStream(in)) {
+            readNN = (NeuralNetwork)ois.readObject();
+        }
+        catch(IOException e) {
+            Assert.fail("Exception caught: " + e.toString());
+        }
+        catch(ClassNotFoundException e) {
+            Assert.fail("Class not found while reading: " + e.toString());
+        }
+        
+        Assert.assertThat(readNN.getSignature(), CoreMatchers.is(expected));
     }
     
 }
