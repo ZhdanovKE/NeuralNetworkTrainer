@@ -44,6 +44,7 @@ public class NeuralNetwork implements Serializable {
      * @param numOutputs The number of outputs of the neural network.
      * @throws IllegalArgumentException if any provided numerical value is zero or
      * negative.
+     * @throws NullPointerException if {@link hiddenLayerSizes} is null.
      */
     public NeuralNetwork(int numInputs, int[] hiddenLayerSizes, int numOutputs) {
         if (numInputs <= 0 || hiddenLayerSizes.length <= 0 || numOutputs <= 0) {
@@ -70,6 +71,7 @@ public class NeuralNetwork implements Serializable {
      * Copy constructor.
      * @param nn a source {@code NeuralNetwork} to be copied into a newly created
      * one.
+     * @throws NullPointerException if {@link nn} is null.
      */
     public NeuralNetwork(NeuralNetwork nn) {
         if (nn == null) {
