@@ -1,12 +1,12 @@
 package neuralnetwork;
 
-import static neuralnetwork.TestUtils.assertNNEquals;
-import static neuralnetwork.TestUtils.assertNNNotEquals;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import static neuralnetwork.TestUtils.*;
+import neuralnetwork.init.Initializer;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -15,6 +15,51 @@ import org.junit.Test;
  * @author Konstantin Zhdanov
  */
 public class NamedNeuralNetworkTest {
+    
+    @Test
+    public void testConstructorFiveArgs_ValidValuesPassed_CreateRequestedStructureAndNameAndWeights() {
+        int nInputs = 2;
+        int[] hiddenLayerSizes = {2, 3};
+        int nOutputs = 4;
+        String name = "Placeholder_Name";
+        Initializer initializer = Initializer.of(4.5, 2.1);
+        NamedNeuralNetwork nn = new NamedNeuralNetwork(nInputs, hiddenLayerSizes, 
+                nOutputs, name, initializer);
+        
+        Assert.assertEquals(nInputs, nn.getNumberInputs());
+        Assert.assertEquals(hiddenLayerSizes.length, nn.getNumberHiddenLayers());
+        Assert.assertArrayEquals(hiddenLayerSizes, nn.getHiddenLayerSizes());
+        Assert.assertEquals(nOutputs, nn.getNumberOutputs());
+        Assert.assertEquals(name, nn.getName());
+        
+        double[][][] weights = extractNNWeights(nn);
+        for (double[][] twoDarray : weights) {
+            for (double[] oneDarray : twoDarray) {
+                for (double elem : oneDarray) {
+                    Assert.assertEquals(elem, 4.5, DELTA);
+                }
+            }
+        }
+        double[][] biases = extractNNBiases(nn);
+        for (double[] oneDarray : biases) {
+            for (double elem : oneDarray) {
+                Assert.assertEquals(elem, 2.1, DELTA);
+            }
+        }
+    }
+    
+    @Test(expected = NullPointerException.class)
+    public void testConstructorFiveArgs_NullNamePassed_Throw() {
+        int nInputs = 2;
+        int[] hiddenLayerSizes = {2, 3};
+        int nOutputs = 4;
+        String name = null;
+        Initializer initializer = Initializer.of(4.5, 2.1);
+        NamedNeuralNetwork nn = new NamedNeuralNetwork(nInputs, hiddenLayerSizes, 
+                nOutputs, name, initializer);
+        
+        Assert.fail("The test case must throw");
+    }
     
     @Test
     public void testConstructorFourArgs_ValidValuesPassed_CreateRequestedStructureAndName() {

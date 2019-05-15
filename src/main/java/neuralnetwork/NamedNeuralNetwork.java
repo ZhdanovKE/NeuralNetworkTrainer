@@ -1,6 +1,7 @@
 package neuralnetwork;
 
 import java.io.Serializable;
+import neuralnetwork.init.Initializer;
 
 /**
  * A neural network that contains a name associated with it.
@@ -12,6 +13,28 @@ public class NamedNeuralNetwork extends NeuralNetwork implements Serializable {
     
     /** Name of this Neural Network **/
     private String name;
+    
+    /**
+     * Create a neural network of particular size with a name.
+     * @param numInputs Number of input neurons.
+     * @param hiddenLayerSizes Number of hidden layers neurons.
+     * @param numOutputs Number of outputs neurons.
+     * @param name Name of this network.
+     * @param initializer {@link Initializer} to be used to initialize weights 
+     * and biases.
+     * @throws IllegalArgumentException if any provided numerical value is zero or
+     * negative.
+     * @throws NullPointerException if {@link hiddenLayerSizes} is null or 
+     * if {@link name} is null.
+     */
+    public NamedNeuralNetwork(int numInputs, int[] hiddenLayerSizes, int numOutputs, 
+            String name, Initializer initializer) {
+        super(numInputs, hiddenLayerSizes, numOutputs, initializer);
+        if (name == null) {
+            throw new NullPointerException("Name cannot be null");
+        }
+        this.name = name;
+    }
     
     /**
      * Create a neural network of particular size with a name.

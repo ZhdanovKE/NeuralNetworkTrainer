@@ -1,5 +1,6 @@
 package neuralnetwork;
 
+import neuralnetwork.init.Initializer;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.stream.Collectors;
@@ -45,13 +46,20 @@ public class NeuralNetwork implements Serializable {
      * @param numInputs The number of inputs of the neural network.
      * @param hiddenLayerSizes The sizes of the hidden layers of the neural network.
      * @param numOutputs The number of outputs of the neural network.
+     * @param initializer {@link Initializer} instance used to initialize weights
+     * and biases of this network;
      * @throws IllegalArgumentException if any provided numerical value is zero or
      * negative.
-     * @throws NullPointerException if {@link hiddenLayerSizes} is null.
+     * @throws NullPointerException if {@link hiddenLayerSizes} or 
+     * {@code initializer} is null.
      */
-    public NeuralNetwork(int numInputs, int[] hiddenLayerSizes, int numOutputs) {
+    public NeuralNetwork(int numInputs, int[] hiddenLayerSizes, int numOutputs, 
+            Initializer initializer) {
         if (numInputs <= 0 || hiddenLayerSizes.length <= 0 || numOutputs <= 0) {
             throw new IllegalArgumentException("All numbers must be positive");
+        }
+        if (initializer == null) {
+            throw new NullPointerException("Initializer cannot be null");
         }
         for (int size : hiddenLayerSizes) {
             if (size <= 0) {
@@ -67,7 +75,22 @@ public class NeuralNetwork implements Serializable {
         
         activationFcn = ActivationFunctions.SIGMOID;
         
-        init();
+        init(initializer);
+    }
+    
+    /** 
+     * Create a {@code NeuralNetwork} instance with the provided sizes of layers
+     * and fill them with the default value of 0 and the default activation function 
+     * (Sigmoid).
+     * @param numInputs The number of inputs of the neural network.
+     * @param hiddenLayerSizes The sizes of the hidden layers of the neural network.
+     * @param numOutputs The number of outputs of the neural network.
+     * @throws IllegalArgumentException if any provided numerical value is zero or
+     * negative.
+     * @throws NullPointerException if {@link hiddenLayerSizes} is null.
+     */
+    public NeuralNetwork(int numInputs, int[] hiddenLayerSizes, int numOutputs) {
+        this(numInputs, hiddenLayerSizes, numOutputs, Initializer.of(0.0, 0.0));
     }
     
     /**
@@ -88,7 +111,7 @@ public class NeuralNetwork implements Serializable {
       
         this.activationFcn = nn.getActivationFunction();
         
-        init();
+        init(Initializer.of(0.0, 0.0));
         
         for (int i = 0; i < this.weights.length; i++) {
             for (int j = 0; j < this.weights[i].length; j++) {
@@ -106,52 +129,68 @@ public class NeuralNetwork implements Serializable {
     
     /**
      * Allocate memory for the weights and biases according to the size of the network
-     * and fill them with 0.
+     * and fill them with values supplied by {@code initializer}.
      */
-    private void init() {
-        initWeights();
-        initBiases();
+    private void init(Initializer initializer) {
+        initWeights(initializer);
+        initBiases(initializer);
     }
     
     /**
      * Allocate memory for the weights according to the size of the network
-     * and fill them with 0.
+     * and fill them value supplied by {@code initializer}.
+     * @param initializer {@link Initializer} to be used to initialize weights.
      */
-    private void initWeights() {
+    private void initWeights(Initializer initializer) {
         weights = new double[nHiddenLayers + 1][][];
         // Input layer <-> 1st hidden layer
         int curLayerNum = 0;
         int prevLayerSize = nInputs;
         int curLayerSize = hiddenLayerSizes[0];
-        weights[curLayerNum] = initLayer(curLayerSize, prevLayerSize);
+        weights[curLayerNum] = initLayer(curLayerNum, curLayerSize, prevLayerSize,
+                    initializer);
         prevLayerSize = curLayerSize;
         
         // Hidden layer <-> hidden layer
         for (curLayerNum = 1; curLayerNum < nHiddenLayers; curLayerNum++) {
             curLayerSize = hiddenLayerSizes[curLayerNum];
-            weights[curLayerNum] = initLayer(curLayerSize, prevLayerSize);
+            weights[curLayerNum] = initLayer(curLayerNum, curLayerSize, prevLayerSize,
+                    initializer);
             prevLayerSize = curLayerSize;
         }
         
         // Last hidden layer <-> Output layer
         curLayerSize = nOutputs;
         curLayerNum = nHiddenLayers;
-        weights[curLayerNum] = initLayer(curLayerSize, prevLayerSize);
+        weights[curLayerNum] = initLayer(curLayerNum, curLayerSize, prevLayerSize,
+                initializer);
     }
     
     /**
      * Allocate memory for the layer's weights according to the size of
-     * the previous layer and return the allocated weights.
+     * the previous layer, set their values to the ones supplied by 
+     * {@code initializer} and return the allocated weights.
+     * @param layerNum The index of the current layer.
      * @param layerSize The size of the current layer.
      * @param prevLayerSize The size of the previous layer.
+     * @param initializer {@link Initializer} to be used to initialize weights.
      * @return an allocated 2-D {@code double} array of weights between the 
      * current layer and the previous layer.
      */
-    private double[][] initLayer(int layerSize, int prevLayerSize) {
+    private double[][] initLayer(int layerNum, int layerSize, int prevLayerSize, 
+            Initializer initializer) {
         double[][] layerWeights = new double[layerSize][];
         
         for (int layerNeuron = 0; layerNeuron < layerSize; layerNeuron++) {
             layerWeights[layerNeuron] = new double[prevLayerSize];
+            for (int prevLayerNeuron = 0; prevLayerNeuron < prevLayerSize; prevLayerNeuron++) {
+                layerWeights[layerNeuron][prevLayerNeuron] = 
+                        initializer.supplyWeight(
+                                layerNum, 
+                                prevLayerNeuron, 
+                                layerNeuron
+                        );
+            }
         }
         
         return layerWeights;
@@ -159,14 +198,21 @@ public class NeuralNetwork implements Serializable {
     
     /**
      * Allocate memory for the biases according to the size of the network
-     * and fill them with 0.
+     * and fill them with values supplied by {@code initializer}.
+     * @param initializer {@link Initializer} to be used to initialize biases.
      */
-    private void initBiases() {
+    private void initBiases(Initializer initializer) {
         biases = new double[nHiddenLayers + 1][];
         for (int i = 0; i < nHiddenLayers; i++) {
             biases[i] = new double[hiddenLayerSizes[i]];
+            for (int j = 0; j < hiddenLayerSizes[i]; j++) {
+                biases[i][j] = initializer.supplyBias(i, j);
+            }
         }
         biases[nHiddenLayers] = new double[nOutputs];
+        for (int j = 0; j < nOutputs; j++) {
+            biases[nHiddenLayers][j] = initializer.supplyBias(nHiddenLayers, j);
+        }
     }
     
     /**

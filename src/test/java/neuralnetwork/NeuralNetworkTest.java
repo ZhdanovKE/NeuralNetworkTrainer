@@ -10,6 +10,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import neuralnetwork.init.Initializer;
 import org.hamcrest.CoreMatchers;
 
 
@@ -107,6 +108,18 @@ public class NeuralNetworkTest {
         Assert.fail();
     }
     
+    @Test(expected = NullPointerException.class)
+    public void testConstructor_NullInitializer_Throws() {
+        int nInputs = 3;
+        int[] hiddenLayerSizes = {2, 3};
+        int nOutputs = 4;
+        Initializer initializer = null;
+        
+        new NeuralNetwork(nInputs, hiddenLayerSizes, nOutputs, initializer);
+    
+        Assert.fail();
+    }
+    
     @Test
     public void testConstructor_ValidArguments_CreatesValidObjectWithZeroWeights() {
         int nInputs = 3;
@@ -147,6 +160,182 @@ public class NeuralNetworkTest {
         for (double[] oneDarray : biases) {
             for (double elem : oneDarray) {
                 Assert.assertEquals(elem, 0.0, DELTA);
+            }
+        }
+    }
+    
+    @Test
+    public void testConstructor_SingleValueInitializer_CreatesValidObjectWithCorrectWeights() {
+        int nInputs = 3;
+        int[] hiddenLayerSizes = {2, 3};
+        int nOutputs = 4;
+        double weightValue = -4.5;
+        double biasValue = 2.2;
+        Initializer initializer = Initializer.of(weightValue, biasValue);
+        
+        NeuralNetwork nn = new NeuralNetwork(nInputs, hiddenLayerSizes, nOutputs,
+            initializer);
+    
+        Assert.assertEquals("Number of inputs changed", nInputs, nn.getNumberInputs());
+        Assert.assertEquals("Number of hidden layers changed", hiddenLayerSizes.length, nn.getNumberHiddenLayers());
+        Assert.assertArrayEquals("Hidden layer size changed", hiddenLayerSizes, nn.getHiddenLayerSizes());
+        Assert.assertEquals("Number of outputs changed", nOutputs, nn.getNumberOutputs());
+        
+        double[][][] weights = extractNNWeights(nn);
+        
+        for (int i = 0; i < hiddenLayerSizes[0]; i++) {
+            Assert.assertEquals("Weights are inconsistent (inputs)", nInputs, weights[0][i].length);
+        }
+        
+        for (int i = 1; i < hiddenLayerSizes.length; i++) {
+            for (int j = 0; j < hiddenLayerSizes[i]; j++) {
+                Assert.assertEquals("Weights are inconsistent", hiddenLayerSizes[i - 1], weights[i][j].length);
+            }
+        }
+        
+        for (double[] weight : weights[weights.length - 1]) {
+            Assert.assertEquals("Weights are inconsistent (outputs)", hiddenLayerSizes[hiddenLayerSizes.length - 1], weight.length);
+        }
+        
+        for (double[][] twoDarray : weights) {
+            for (double[] oneDarray : twoDarray) {
+                for (double elem : oneDarray) {
+                    Assert.assertEquals(elem, weightValue, DELTA);
+                }
+            }
+        }
+        double[][] biases = extractNNBiases(nn);
+        for (double[] oneDarray : biases) {
+            for (double elem : oneDarray) {
+                Assert.assertEquals(elem, biasValue, DELTA);
+            }
+        }
+    }
+    
+    @Test
+    public void testConstructor_RandomRangeInitializer_CreatesValidObjectWithCorrectWeights() {
+        int nInputs = 3;
+        int[] hiddenLayerSizes = {2, 3};
+        int nOutputs = 4;
+        double minWeightsValue = 2.0;
+        double maxWeightsValue = 5.0;
+        double minBiasesValue = 10.4;
+        double maxBiasesValue = 12.0;
+        Initializer initializer = Initializer.ofCustomRandomRange(minWeightsValue, 
+                maxWeightsValue, minBiasesValue, maxBiasesValue);
+        
+        NeuralNetwork nn = new NeuralNetwork(nInputs, hiddenLayerSizes, nOutputs,
+            initializer);
+    
+        Assert.assertEquals("Number of inputs changed", nInputs, nn.getNumberInputs());
+        Assert.assertEquals("Number of hidden layers changed", hiddenLayerSizes.length, nn.getNumberHiddenLayers());
+        Assert.assertArrayEquals("Hidden layer size changed", hiddenLayerSizes, nn.getHiddenLayerSizes());
+        Assert.assertEquals("Number of outputs changed", nOutputs, nn.getNumberOutputs());
+        
+        double[][][] weights = extractNNWeights(nn);
+        
+        for (int i = 0; i < hiddenLayerSizes[0]; i++) {
+            Assert.assertEquals("Weights are inconsistent (inputs)", nInputs, weights[0][i].length);
+        }
+        
+        for (int i = 1; i < hiddenLayerSizes.length; i++) {
+            for (int j = 0; j < hiddenLayerSizes[i]; j++) {
+                Assert.assertEquals("Weights are inconsistent", hiddenLayerSizes[i - 1], weights[i][j].length);
+            }
+        }
+        
+        for (double[] weight : weights[weights.length - 1]) {
+            Assert.assertEquals("Weights are inconsistent (outputs)", hiddenLayerSizes[hiddenLayerSizes.length - 1], weight.length);
+        }
+        
+        for (double[][] twoDarray : weights) {
+            for (double[] oneDarray : twoDarray) {
+                for (double elem : oneDarray) {
+                    Assert.assertTrue(elem >= minWeightsValue);
+                    Assert.assertTrue(elem <= maxWeightsValue);
+                }
+            }
+        }
+        double[][] biases = extractNNBiases(nn);
+        for (double[] oneDarray : biases) {
+            for (double elem : oneDarray) {
+                Assert.assertTrue(elem >= minBiasesValue);
+                Assert.assertTrue(elem <= maxBiasesValue);
+            }
+        }
+    }
+    
+    @Test
+    public void testConstructor_InitializerSetValueOfOneWeightAndBias_CreatesValidObjectWithCorrectWeights() {
+        int nInputs = 3;
+        int[] hiddenLayerSizes = {2, 3};
+        int nOutputs = 4;
+        int[] weightIndices = {1, 1, 0};
+        double otherWeight = 4.6;
+        int[] biasIndices = {2, 2};
+        double otherBias = -3.2;
+        Initializer initializer = Initializer.of((layerNum, prevLayerNeuronNum, layerNeuronNum) -> {
+            if (layerNum == weightIndices[0] && prevLayerNeuronNum == weightIndices[1] &&
+                    layerNeuronNum == weightIndices[2]) {
+                return otherWeight;
+            }
+            else return 0.0;
+        }, (layerNum, layerNeuronNum) -> {
+            if (layerNum == biasIndices[0] &&
+                    layerNeuronNum == biasIndices[1]) {
+                return otherBias;
+            }
+            else return 0.0;
+        });
+        
+        NeuralNetwork nn = new NeuralNetwork(nInputs, hiddenLayerSizes, nOutputs,
+            initializer);
+    
+        Assert.assertEquals("Number of inputs changed", nInputs, nn.getNumberInputs());
+        Assert.assertEquals("Number of hidden layers changed", hiddenLayerSizes.length, nn.getNumberHiddenLayers());
+        Assert.assertArrayEquals("Hidden layer size changed", hiddenLayerSizes, nn.getHiddenLayerSizes());
+        Assert.assertEquals("Number of outputs changed", nOutputs, nn.getNumberOutputs());
+        
+        double[][][] weights = extractNNWeights(nn);
+        
+        for (int i = 0; i < hiddenLayerSizes[0]; i++) {
+            Assert.assertEquals("Weights are inconsistent (inputs)", nInputs, weights[0][i].length);
+        }
+        
+        for (int i = 1; i < hiddenLayerSizes.length; i++) {
+            for (int j = 0; j < hiddenLayerSizes[i]; j++) {
+                Assert.assertEquals("Weights are inconsistent", hiddenLayerSizes[i - 1], weights[i][j].length);
+            }
+        }
+        
+        for (double[] weight : weights[weights.length - 1]) {
+            Assert.assertEquals("Weights are inconsistent (outputs)", hiddenLayerSizes[hiddenLayerSizes.length - 1], weight.length);
+        }
+        
+        for (int i = 0; i < weights.length; i++) {
+            for (int j = 0; j < weights[i].length; j++) {
+                for (int k = 0; k < weights[i][j].length; k++) {
+                    if (i == weightIndices[0] && k == weightIndices[1] &&
+                            j == weightIndices[2]) {
+                        Assert.assertEquals(otherWeight, weights[i][j][k], TestUtils.DELTA);
+                    }
+                    else {
+                        Assert.assertEquals(0.0, weights[i][j][k], TestUtils.DELTA);
+                    }
+                }
+            }
+        }
+        
+        double[][] biases = extractNNBiases(nn);
+        for (int i = 0; i < biases.length; i++) {
+            for (int j = 0; j < biases[i].length; j++) {
+               
+                if (i == biasIndices[0] && j == biasIndices[1]) {
+                    Assert.assertEquals(otherBias, biases[i][j], TestUtils.DELTA);
+                }
+                else {
+                    Assert.assertEquals(0.0, biases[i][j], TestUtils.DELTA);
+                }
             }
         }
     }
